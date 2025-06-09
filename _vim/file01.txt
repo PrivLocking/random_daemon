@@ -1,5 +1,2 @@
 Makefile
-src/random_youtube_daemon.c
-src/random_youtube_daemon2.c
-src/random_youtube_daemon3.c
-src/random_youtube_daemon4.c
+src/random_yt_daemon4.c

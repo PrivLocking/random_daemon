@@ -154,24 +154,50 @@ void load_video_list() {
     printf("Loaded %d valid YouTube URLs from %s\n", video_list.count, proxy_list_path);
 }
 
+// Case-insensitive string search function
+const char* strcasestr_custom(const char *haystack, const char *needle) {
+    if (!haystack || !needle) return NULL;
+
+    size_t needle_len = strlen(needle);
+    if (needle_len == 0) return haystack;
+
+    for (const char *p = haystack; *p; p++) {
+        if (strncasecmp(p, needle, needle_len) == 0) {
+            return p;
+        }
+    }
+    return NULL;
+}
+
 void extract_host_and_path(const char *request, char *host, char *path) {
-    const char *host_start = strstr(request, "Host: ");
-    if(host_start) {
-        host_start += 6;
+    // Clear output buffers
+    host[0] = '\0';
+    path[0] = '\0';
+
+    // Extract host (case-insensitive search for "Host:")
+    const char *host_start = strcasestr_custom(request, "Host:");
+    if (host_start) {
+        host_start += 5; // Skip "Host:"
+
+        // Skip any whitespace after "Host:"
+        while (*host_start == ' ' || *host_start == '\t') {
+            host_start++;
+        }
+
         const char *host_end = strstr(host_start, "\r\n");
-        if(!host_end) host_end = strstr(host_start, "\n");
-        if(host_end) {
+        if (!host_end) host_end = strstr(host_start, "\n");
+        if (host_end) {
             int host_len = host_end - host_start;
             strncpy(host, host_start, host_len);
             host[host_len] = '\0';
         }
     }
-    
-    // Extract path from "GET /path HTTP/1.1"
-    if(strncmp(request, "GET ", 4) == 0) {
+
+    // Extract path (case-insensitive check for GET method)
+    if (strncasecmp(request, "GET ", 4) == 0) {
         const char *path_start = request + 4;
         const char *path_end = strchr(path_start, ' ');
-        if(path_end) {
+        if (path_end) {
             int path_len = path_end - path_start;
             strncpy(path, path_start, path_len);
             path[path_len] = '\0';
@@ -228,7 +254,7 @@ void handle_request(int client_fd) {
     if(strncmp(buffer, "GET ", 4) != 0) return;
     
     extract_host_and_path(buffer, host, path);
-    printf( "=== buffer %ld [%s] === host %ld [%s] === path %ld [%s] \n", strlen(buffer), buffer, strlen(host), host, strlen(path), path );
+    //printf( "=== buffer %ld [%s] === host %ld [%s] === path %ld [%s] \n", strlen(buffer), buffer, strlen(host), host, strlen(path), path ); // debug
 
     
     request_count++;

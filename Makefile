@@ -141,6 +141,7 @@ ball:
 	strip $(dst)
 
 tSock:=test/sock.test.sock
+tSock2:=/lxc_/u99/wwwFS.out/sock.youtube.recommend.sock
 tSrc:=src/videos.newest.120.txt
 t1 test run_test_daemon:
 	@echo
@@ -157,6 +158,7 @@ t2 run_curl_test:
 	curl --unix-socket $(tSock)   -s http://ip.jjj123.com/abcd/efg |grep window.location.href
 	curl --unix-socket $(tSock)   -s http://ip.jjj123.com/abcd/efg/ |grep window.location.href
 	curl --unix-socket $(tSock)   -s http://ip.jjj123.com/abcd/efg/efg |grep window.location.href
+	curl --unix-socket $(tSock2)   -s http://ip.jjj123.com/abcd/efg/efg |grep window.location.href
 	@echo
 t3 run_test_server:
 	@echo
