@@ -139,6 +139,7 @@ ball:
 		$(sourceList)   \
 		$(LDLIBS)
 	strip $(dst)
+	realpath $(dst)
 
 tSock:=test/sock.test.sock
 tSock2:=/lxc_/u99/wwwFS.out/sock.youtube.recommend.sock
@@ -165,4 +166,8 @@ t3 run_test_server:
 	curl -s --resolve "www.jjj123.com:443:74.131.213.118" https://www.jjj123.com/recommend/aa |grep href
 	@echo
 	curl -s --resolve "www.jjj123.com:443:74.131.213.118" https://www.jjj123.com/recommend/   |grep href
+	@echo
+t4 run_test_server_on_u99:
+	@echo
+	curl --unix-socket $(tSock2)   -s http://ip.jjj123.com/abcd/efg/efg |grep window.location.href
 	@echo
