@@ -61,17 +61,17 @@ void generate_random_url(char *url_buf, int *video_index) {
     time_t now = time(NULL);
     char input[64];
     unsigned char new_md5[MD5_DIGEST_LENGTH];
-    
+
     int timestamp_len = snprintf(input, sizeof(input), "%ld", now);
     memcpy(input + timestamp_len, md5_seed, MD5_DIGEST_LENGTH);
-    
+
     md5_hash(input, timestamp_len + MD5_DIGEST_LENGTH, new_md5);
     memcpy(md5_seed, new_md5, MD5_DIGEST_LENGTH);
-    
+
     unsigned char *last_5 = &new_md5[MD5_DIGEST_LENGTH-5];
     int url_len = (last_5[4] & 0x07) + 8;
     uint32_t video_idx = *((uint32_t*)last_5) % video_list.count;
-    
+
     for(int i = 0; i < url_len; i++) {
         sprintf(&url_buf[i*2], "%02x", new_md5[i]);
     }
@@ -82,14 +82,14 @@ void generate_random_url(char *url_buf, int *video_index) {
 int is_valid_youtube_url(const char *line) {
     const char prefix[] = "https://www.youtube.com/watch?v=";
     if(strncmp(line, prefix, strlen(prefix)) != 0) return 0;
-    
+
     const char *video_id = line + strlen(prefix);
     if(strlen(video_id) != 11) return 0;
-    
+
     for(int i = 0; i < 11; i++) {
         char c = video_id[i];
         if(!((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || 
-             (c >= '0' && c <= '9') || c == '_' || c == '-')) {
+                    (c >= '0' && c <= '9') || c == '_' || c == '-')) {
             return 0;
         }
     }
@@ -104,21 +104,21 @@ void load_video_list() {
         fprintf(stderr, "Please ensure the file exists and is readable.\n");
         exit(1);
     }
-    
+
     if(video_list.lines) {
         for(int i = 0; i < video_list.count; i++) {
             free(video_list.lines[i]);
         }
         free(video_list.lines);
     }
-    
+
     video_list.lines = malloc(MAX_LINES * sizeof(char*));
     if(!video_list.lines) {
         fprintf(stderr, "ERROR: Memory allocation failed for video list\n");
         exit(1);
     }
     video_list.count = 0;
-    
+
     char line[MAX_LINE_LEN];
     int line_num = 0;
     while(fgets(line, sizeof(line), fp) && video_list.count < MAX_LINES) {
@@ -127,9 +127,9 @@ void load_video_list() {
         char *p = line;
         while(*p && *p != '\r' && *p != '\n') p++;
         *p = '\0';
-        
+
         if(strlen(line) == 0) continue;
-        
+
         if(is_valid_youtube_url(line)) {
             video_list.lines[video_list.count] = strdup(line);
             if(!video_list.lines[video_list.count]) {
@@ -141,16 +141,16 @@ void load_video_list() {
             printf("WARNING: Skipping invalid YouTube URL at line %d: %s\n", line_num, line);
         }
     }
-    
+
     fclose(fp);
-    
+
     if(video_list.count == 0) {
         fprintf(stderr, "ERROR: No valid YouTube URLs found in '%s'\n", proxy_list_path);
         fprintf(stderr, "Expected format: https://www.youtube.com/watch?v=VIDEO_ID\n");
         fprintf(stderr, "Where VIDEO_ID is exactly 11 characters [A-Za-z0-9_-]\n");
         exit(1);
     }
-    
+
     printf("Loaded %d valid YouTube URLs from %s\n", video_list.count, proxy_list_path);
 }
 
@@ -206,6 +206,7 @@ void extract_host_and_path(const char *request, char *host, char *path) {
 }
 
 void send_html_response(int client_fd, const char *redirect_url) {
+
     const char *html_template =
         "<!DOCTYPE html>\n"
         "<html lang=\"en\">\n"
@@ -319,6 +320,24 @@ void send_html_response(int client_fd, const char *redirect_url) {
         "            transition: width 1s linear;\n"
         "        }\n"
         "        \n"
+        "        .control-button {\n"
+        "            margin-top: 15px;\n"
+        "            padding: 10px 20px;\n"
+        "            background: rgba(255, 255, 255, 0.2);\n"
+        "            border: 2px solid white;\n"
+        "            border-radius: 25px;\n"
+        "            color: white;\n"
+        "            font-size: clamp(0.9rem, 2vw, 1rem);\n"
+        "            font-weight: 600;\n"
+        "            cursor: pointer;\n"
+        "            transition: all 0.3s ease;\n"
+        "        }\n"
+        "        \n"
+        "        .control-button:hover {\n"
+        "            background: rgba(255, 255, 255, 0.3);\n"
+        "            transform: translateY(-2px);\n"
+        "        }\n"
+        "        \n"
         "        @media (max-width: 480px) {\n"
         "            .container {\n"
         "                padding: 20px;\n"
@@ -357,46 +376,66 @@ void send_html_response(int client_fd, const char *redirect_url) {
         "            <div class=\"progress-bar\">\n"
         "                <div class=\"progress-fill\" id=\"progress\"></div>\n"
         "            </div>\n"
+        "            <button class=\"control-button\" id=\"controlBtn\" onclick=\"toggleTimer()\">Stop</button>\n"
         "        </div>\n"
         "    </div>\n"
         "\n"
         "    <script>\n"
         "        let countdown = 7;\n"
+        "        let timer;\n"
+        "        let isRunning = true;\n"
         "        const countdownElement = document.getElementById('countdown');\n"
         "        const progressElement = document.getElementById('progress');\n"
+        "        const controlBtn = document.getElementById('controlBtn');\n"
         "        \n"
         "        progressElement.style.width = '100%%';\n"
         "        \n"
-        "        const timer = setInterval(function() {\n"
-        "            countdown--;\n"
-        "            countdownElement.textContent = countdown;\n"
-        "            \n"
-        "            const progressPercent = (countdown / 7) * 100;\n"
-        "            progressElement.style.width = progressPercent + '%%';\n"
-        "            \n"
-        "            if (countdown <= 0) {\n"
+        "        function startTimer() {\n"
+        "            timer = setInterval(function() {\n"
+        "                countdown--;\n"
+        "                countdownElement.textContent = countdown;\n"
+        "                \n"
+        "                const progressPercent = (countdown / 7) * 100;\n"
+        "                progressElement.style.width = progressPercent + '%%';\n"
+        "                \n"
+        "                if (countdown <= 0) {\n"
+        "                    clearInterval(timer);\n"
+        "                    countdownElement.textContent = 'Redirecting...';\n"
+        "                    window.location.href = '%s';\n"
+        "                }\n"
+        "            }, 1000);\n"
+        "        }\n"
+        "        \n"
+        "        function toggleTimer() {\n"
+        "            if (isRunning) {\n"
         "                clearInterval(timer);\n"
-        "                countdownElement.textContent = 'Redirecting...';\n"
-        "                window.location.href = '%s';\n"
+        "                controlBtn.textContent = 'Start';\n"
+        "                isRunning = false;\n"
+        "            } else {\n"
+        "                startTimer();\n"
+        "                controlBtn.textContent = 'Stop';\n"
+        "                isRunning = true;\n"
         "            }\n"
-        "        }, 1000);\n"
+        "        }\n"
+        "        \n"
+        "        startTimer();\n"
         "    </script>\n"
         "</body></html>";
-    
+
     char html_content[8192];
     snprintf(html_content, sizeof(html_content), html_template, redirect_url);
-    
+
     char response[8192];
     snprintf(response, sizeof(response),
-        "HTTP/1.1 200 OK\r\n"
-        "Content-Type: text/html; charset=UTF-8\r\n"
-        "Content-Length: %ld\r\n"
-        "Cache-Control: no-store, no-cache, must-revalidate, private\r\n"
-        "Pragma: no-cache\r\n"
-        "Expires: 0\r\n"
-        "\r\n"
-        "%s", strlen(html_content), html_content);
-    
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: text/html; charset=UTF-8\r\n"
+            "Content-Length: %ld\r\n"
+            "Cache-Control: no-store, no-cache, must-revalidate, private\r\n"
+            "Pragma: no-cache\r\n"
+            "Expires: 0\r\n"
+            "\r\n"
+            "%s", strlen(html_content), html_content);
+
     send(client_fd, response, strlen(response), 0);
 }
 
@@ -404,27 +443,27 @@ void handle_request(int client_fd) {
     char buffer[BUFFER_SIZE];
     ssize_t bytes_read = recv(client_fd, buffer, sizeof(buffer)-1, 0);
     if(bytes_read <= 0) return;
-    
+
     buffer[bytes_read] = '\0';
-    
+
     char host[256] = {0};
     char path[256] = {0};
-    
+
     if(strncmp(buffer, "GET ", 4) != 0) return;
-    
+
     extract_host_and_path(buffer, host, path);
     //printf( "=== buffer %ld [%s] === host %ld [%s] === path %ld [%s] \n", strlen(buffer), buffer, strlen(host), host, strlen(path), path ); // debug
 
-    
+
     request_count++;
     if(request_count % RELOAD_INTERVAL == 0) {
         load_video_list();
     }
-    
+
     char random_url[64];
     int video_index;
     generate_random_url(random_url, &video_index);
-    
+
     int path_len = strlen(path);
     if(path_len > 0 && path[path_len-1] == '/') {
         // Path ends with /, redirect to same path + random
@@ -444,26 +483,26 @@ void handle_request(int client_fd) {
 int try_lock_port() {
     int sock = socket(AF_INET, SOCK_STREAM, 0);
     if(sock == -1) return 0;
-    
+
     int reuse = 1;
     setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
-    
+
     struct sockaddr_in addr;
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = inet_addr("127.0.0.1");
     addr.sin_port = htons(LOCK_PORT);
-    
+
     if(bind(sock, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
         close(sock);
         return 0;
     }
-    
+
     if(listen(sock, 1) == -1) {
         close(sock);
         return 0;
     }
-    
+
     return sock;
 }
 
@@ -479,9 +518,9 @@ int main(int argc, char *argv[]) {
             return 0;
         }
     }
-    
+
     print_help(argv[0]);
-    
+
     // Try to lock port to prevent multiple instances
     int lock_fd = try_lock_port();
     if(!lock_fd) {
@@ -489,49 +528,49 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Please stop the existing instance before starting a new one.\n");
         exit(1);
     }
-    
+
     printf("Instance lock acquired on port %d\n", LOCK_PORT);
-    
+
     signal(SIGPIPE, SIG_IGN);
-    
+
     init_seed();
     load_video_list();
-    
+
     // Remove existing socket file
     if(unlink(socket_path) == 0) {
         printf("Removed existing socket file: %s\n", socket_path);
     }
-    
+
     int server_fd = socket(AF_UNIX, SOCK_STREAM, 0);
     if(server_fd == -1) {
         fprintf(stderr, "ERROR: Failed to create Unix socket: %s\n", strerror(errno));
         exit(1);
     }
-    
+
     struct sockaddr_un addr;
     memset(&addr, 0, sizeof(addr));
     addr.sun_family = AF_UNIX;
     strcpy(addr.sun_path, socket_path);
-    
+
     if(bind(server_fd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
         fprintf(stderr, "ERROR: Failed to bind socket to '%s': %s\n", socket_path, strerror(errno));
         fprintf(stderr, "Please check if the directory exists and has proper permissions.\n");
         exit(1);
     }
-    
+
     if(chmod(socket_path, 0666) == -1) {
         fprintf(stderr, "WARNING: Failed to set socket permissions: %s\n", strerror(errno));
     }
-    
+
     if(listen(server_fd, 10) == -1) {
         fprintf(stderr, "ERROR: Failed to listen on socket: %s\n", strerror(errno));
         exit(1);
     }
-    
+
     printf("Daemon started successfully\n");
     printf("Listening on socket: %s\n", socket_path);
     printf("Ready to serve requests...\n");
-    
+
     while(1) {
         int client_fd = accept(server_fd, NULL, NULL);
         if(client_fd == -1) {
@@ -539,11 +578,11 @@ int main(int argc, char *argv[]) {
             fprintf(stderr, "WARNING: Accept failed: %s\n", strerror(errno));
             continue;
         }
-        
+
         handle_request(client_fd);
         close(client_fd);
     }
-    
+
     close(server_fd);
     close(lock_fd);
     unlink(socket_path);
