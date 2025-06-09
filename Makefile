@@ -158,3 +158,9 @@ t2 run_curl_test:
 	curl --unix-socket $(tSock)   -s http://ip.jjj123.com/abcd/efg/ |grep window.location.href
 	curl --unix-socket $(tSock)   -s http://ip.jjj123.com/abcd/efg/efg |grep window.location.href
 	@echo
+t3 run_test_server:
+	@echo
+	curl -s --resolve "www.jjj123.com:443:74.131.213.118" https://www.jjj123.com/recommend/aa |grep href
+	@echo
+	curl -s --resolve "www.jjj123.com:443:74.131.213.118" https://www.jjj123.com/recommend/   |grep href
+	@echo
