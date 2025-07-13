@@ -12,16 +12,14 @@
 #include <errno.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <openssl/aes.h>
-
 
 #define DEFAULT_SOCKET_PATH "/wwwFS.out/sock.youtube.recommend.sock"
 #define DEFAULT_PROXY_LIST "/etc/proxyList.txt"
 #define LOCK_PORT 38281
-#define MAX_LINES 50000
+#define MAX_LINES 1000
 #define MAX_LINE_LEN 256
 #define BUFFER_SIZE 4096
-#define RELOAD_INTERVAL 10
+#define RELOAD_INTERVAL 1000
 
 typedef struct {
     char **lines;
@@ -30,11 +28,7 @@ typedef struct {
 
 static VideoList video_list = {0};
 static int request_count = 0;
-//static unsigned char md5_seed[MD5_DIGEST_LENGTH];
-static unsigned char aes_seed[32];  // 256-bit AES key
-static unsigned char aes_counter[16];  // 128-bit counter
-static uint64_t counter = 0;
-
+static unsigned char md5_seed[MD5_DIGEST_LENGTH];
 static char socket_path[256] = DEFAULT_SOCKET_PATH;
 static char proxy_list_path[256] = DEFAULT_PROXY_LIST;
 
@@ -57,62 +51,13 @@ void md5_hash(const char *input, size_t len, unsigned char *output) {
 }
 
 void init_seed() {
-    // Collect multiple entropy sources
     time_t now = time(NULL);
-    //char timestamp[32];
-    //int len = snprintf(timestamp, sizeof(timestamp), "%ld", now);
-    //md5_hash(timestamp, len, md5_seed);
-    struct timespec ts;
-    clock_gettime(CLOCK_REALTIME, &ts);
-
-    // Mix multiple entropy sources
-    char entropy_input[128];
-    int len = snprintf(entropy_input, sizeof(entropy_input),
-            "%ld_%ld_%d_%p_%u",
-            now, ts.tv_nsec, getpid(), &entropy_input, (unsigned)random());
-
-    // Generate AES key from mixed entropy
-    unsigned char temp_hash[MD5_DIGEST_LENGTH];
-    md5_hash(entropy_input, len, temp_hash);
-
-    // Expand to 256-bit key using multiple MD5 rounds
-    md5_hash((char*)temp_hash, MD5_DIGEST_LENGTH, aes_seed);
-    md5_hash((char*)aes_seed, MD5_DIGEST_LENGTH, &aes_seed[16]);
-
-    // Initialize counter with entropy
-    memcpy(aes_counter, temp_hash, 16);
-    counter = 0;
-}
-
-void generate_aes_random(unsigned char *output, int output_len) {
-    AES_KEY aes_key;
-    AES_set_encrypt_key(aes_seed, 256, &aes_key);
-
-    // Add system random and increment counter for each call
-    counter++;
-    uint32_t sys_rand = random();
-
-    // Mix counter with system random
-    uint64_t mixed_counter = counter ^ ((uint64_t)sys_rand << 32) ^ sys_rand;
-    memcpy(&aes_counter[8], &mixed_counter, 8);
-
-    // Generate blocks of random data
-    for (int i = 0; i < output_len; i += 16) {
-        unsigned char block[16];
-        AES_encrypt(aes_counter, block, &aes_key);
-
-        int copy_len = (output_len - i < 16) ? output_len - i : 16;
-        memcpy(&output[i], block, copy_len);
-
-        // Increment counter for next block
-        counter++;
-        memcpy(&aes_counter[8], &counter, 8);
-    }
-
+    char timestamp[32];
+    int len = snprintf(timestamp, sizeof(timestamp), "%ld", now);
+    md5_hash(timestamp, len, md5_seed);
 }
 
 void generate_random_url(char *url_buf, int *video_index) {
-    /*
     time_t now = time(NULL);
     char input[64];
     unsigned char new_md5[MD5_DIGEST_LENGTH];
@@ -126,23 +71,9 @@ void generate_random_url(char *url_buf, int *video_index) {
     unsigned char *last_5 = &new_md5[MD5_DIGEST_LENGTH-5];
     int url_len = (last_5[4] & 0x07) + 8;
     uint32_t video_idx = *((uint32_t*)last_5) % video_list.count;
-    */
-    unsigned char random_bytes[32];
-    generate_aes_random(random_bytes, sizeof(random_bytes));
-
-    // Use different parts of random data for different purposes
-    // Bytes 0-7: video index (use 64-bit for better mixing, then mod)
-    uint64_t video_big = *((uint64_t*)&random_bytes[0]);
-    uint32_t video_idx = (uint32_t)(video_big % video_list.count);
-
-    // Bytes 8-11: URL length parameters
-    uint32_t url_params = *((uint32_t*)&random_bytes[8]);
-    int url_len = (url_params & 0x07) + 8;
-
 
     for(int i = 0; i < url_len; i++) {
-        //sprintf(&url_buf[i*2], "%02x", new_md5[i]);
-        sprintf(&url_buf[i*2], "%02x", random_bytes[12 + i]);
+        sprintf(&url_buf[i*2], "%02x", new_md5[i]);
     }
     url_buf[url_len*2] = '\0';
     *video_index = video_idx;

@@ -98,6 +98,7 @@ i in install:
 	cat   $(dst)   > $(installBin1)
 	@ls -l --color   $(installBin1)
 	@md5sum          $(installBin1)
+	@chmod 755       $(installBin1)
 	@echo
 
 vpc:
@@ -169,5 +170,5 @@ t3 run_test_server:
 	@echo
 t4 run_test_server_on_u99:
 	@echo
-	curl --unix-socket $(tSock2)   -s http://ip.jjj123.com/abcd/efg/efg |grep window.location.href
+	curl --unix-socket $(tSock2)   -s http://www.jjj123.com/abcd/efg/efg |grep window.location.href
 	@echo
