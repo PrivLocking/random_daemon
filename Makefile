@@ -140,7 +140,7 @@ ball:
 		$(sourceList)   \
 		$(LDLIBS)
 	strip $(dst)
-	realpath $(dst)
+	md5sum `realpath $(dst)` /home/nginX/bin/yt_random_daemon.bin
 
 tSock:=test/sock.test.sock
 tSock2:=/lxc_/u99/wwwFS.out/sock.youtube.recommend.sock
