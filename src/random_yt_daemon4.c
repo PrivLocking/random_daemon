@@ -265,7 +265,7 @@ void load_video_list() {
     }
 
     printf("Loaded %d valid YouTube URLs from %s. %s \n", video_list.count, proxy_list_path[idx], nowStr() );
-}
+} // load_video_list
 void check_and_reload_config_if_more_than_60s(void) {
     static time_t last_called = 0;
     static int is_initialized = 0;
@@ -286,7 +286,7 @@ void check_and_reload_config_if_more_than_60s(void) {
         // Less than 60s since last call; do nothing
         printf("Config reload skipped (only %.0f seconds since last call). %s \n", difftime(now, last_called), nowStr() );
     }
-}
+} // check_and_reload_config_if_more_than_60s
 
 // Case-insensitive string search function
 const char* strcasestr_custom(const char *haystack, const char *needle) {
