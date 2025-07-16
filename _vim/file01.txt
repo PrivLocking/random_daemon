@@ -1,2 +1,5 @@
 Makefile
+inc/yt_common.h
+src/channel_slot_assign.c
+src/html_logic.c
 src/random_yt_daemon4.c

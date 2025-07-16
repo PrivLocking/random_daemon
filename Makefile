@@ -9,12 +9,13 @@ endif
 
 # your_secure_password_here1
 
-source0 := src/random_yt_daemon.c
-source1 := src/random_yt_daemon2.c
-source2 := src/random_yt_daemon3.c
-source3 := src/random_yt_daemon4.c
+inc1 := inc/yt_common.h
 
-sourceListIdx:=3
+source3 := src/random_yt_daemon4.c
+source4 := src/channel_slot_assign.c
+source5 := src/html_logic.c
+
+sourceListIdx:=3 4 5
 sourceList:=$(foreach ssss,$(sourceListIdx),$(source$(ssss)))
 
 
@@ -27,6 +28,10 @@ CFLAGS := -Wall -Oz -ffunction-sections -fdata-sections -Wl,--gc-sections -stati
 CFLAGS := -Wall -O3 -ffunction-sections -fdata-sections -Wl,--gc-sections -static
 CFLAGS := -Wall -O3 -ffunction-sections -fdata-sections -Wl,--gc-sections -static
 CFLAGS := -Wall -O3 -ffunction-sections -fdata-sections -Wl,--gc-sections
+CFLAGS := -Wall -O3 -ffunction-sections -fdata-sections -Wl,--gc-sections -I.
+CFLAGS := -Wall -O3 -ffunction-sections -fdata-sections -Wl,--gc-sections -I. -mno-avx -mno-avx2
+CFLAGS := -Wall -O2 -ffunction-sections -fdata-sections -Wl,--gc-sections -I. -mno-avx -mno-avx2
+
 LDLIBS := -lgd -lpng -lz -ljpeg -lfreetype -lm -lmicrohttpd -lgnutls
 LDLIBS := -lgd -lpng -lz -ljpeg -lfreetype -lm
 LDLIBS := -lgd -lpng -lz -ljpeg -lfreetype -lm -lfontconfig -lbrotlidec -lbrotlicommon -lbz2 -lexpat
@@ -52,7 +57,12 @@ endef
 export allTEXT
 
 b:ball
+
 v:v3
+
+vi: vi1
+vi1 : $(inc1) vp
+	vim $<
 
 m:
 	vim Makefile
@@ -132,6 +142,7 @@ up:
 	sync
 
 
+#	$(CC) $(CFLAGS) -static -o $(dst) \
 #	$(CC) $(CFLAGS) -c -o $(mid1) $(source1) $(LDLIBS)
 
 ball:
@@ -172,3 +183,21 @@ t4 run_test_server_on_u99:
 	@echo
 	curl --unix-socket $(tSock2)   -s http://www.jjj123.com/abcd/efg/efg |grep window.location.href
 	@echo
+
+define t9Help
+
+curl --unix-socket /home/nginY/dynProg/301_youtube_random_daemon/tmp/sock.youtube.recommend.sock  http://www.jjj123.com/recommend/ -s |grep window.location.href
+curl --unix-socket /home/nginY/dynProg/301_youtube_random_daemon/tmp/sock.youtube.recommend.sock  http://www.jjj123.com/recommend/aa -s |grep window.location.href
+
+endef
+export t9Help
+t9FF:=$(firstword $(wildcard ~/u12/22/???))
+t9F1:=$(t9FF)/dst01.txt
+t9F2:=$(t9FF)/dst02.txt
+t9FS:=$(shell realpath tmp )/sock.youtube.recommend.sock
+t9 run_as_daemon:
+	@echo
+	@echo "$${t9Help}"
+	$(dst) -f $(t9F1) -2 $(t9F2) -s $(t9FS)
+	@echo
+

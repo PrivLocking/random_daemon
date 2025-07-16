@@ -31,7 +31,7 @@ chmod 755                                    ${patH9}/yt_random_daemon.bin
 md5sum                                       ${patH9}/yt_random_daemon.bin 
 
 md5sum                                       ${patH9}/yt_random_daemon.bin                         > /tmp/log.yt_random_daemon.log 
-nohup     ${patH9}/yt_random_daemon.bin -f ${patH2}/videos.list1.txt -2 ${patH2}/videos.list2.txt >> /tmp/log.yt_random_daemon.log &
+nohup     ${patH9}/yt_random_daemon.bin -f ${patH2}/videos.list1.txt -2 ${patH2}/videos.list2.txt >> /tmp/log.yt_random_daemon.log 2>&1 &
 
 sleep 1
 echo 'cat /tmp/log.yt_random_daemon.log'
