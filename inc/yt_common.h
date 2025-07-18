@@ -34,11 +34,17 @@
 #define CONFIG_REFRESH_INTERVAL 60
 
 // New macros for dynamic scheduling
-#define TIME_MIN 0.9
-#define TIME_MAX 3.9
+//#define TIME_MIN 0.9
+//#define TIME_MAX 3.9
+//#define TIME_MIN 2.55 // 3*1.15 == 3.45   , 3 * 0.85 == 2.55
+//#define TIME_MAX 3.45
+#define TIME_MIN 2.805 // 3.3*1.15 == 3.795   , 3.3 * 0.85 == 2.805
+#define TIME_MAX 3.795
+
 //#define TOLERANCE 0.2   // 20% tolerance
 //#define TOLERANCE 0.05   // 5% tolerance
 #define TOLERANCE 0.01   // 1% tolerance
+                         //
 #define CHANNEL_SIZE 2  // Can be changed to 3, 4, 5, etc.
 #define MAX_CHANNELS 5
 #define MAX_SLOTS_PER_CHANNEL 12
